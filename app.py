@@ -51,12 +51,11 @@ def format_count(num):
     return str(n)
 
 # -----------------------------
-# Credenciales BigQuery
+# Credenciales BigQuery (con secrets)
 # -----------------------------
 def get_bq_client():
-    """Devuelve un cliente de BigQuery compatible con local y Streamlit Cloud."""
+    """Devuelve un cliente de BigQuery usando st.secrets (funciona igual en local y en Cloud)."""
     try:
-        # Caso Streamlit Cloud: usamos secrets
         creds = service_account.Credentials.from_service_account_info(
             st.secrets["gcp_service_account"]
         )
@@ -65,15 +64,9 @@ def get_bq_client():
             project=st.secrets["general"]["PROJECT_ID"]
         )
         return client, st.secrets["general"]["DATASET_ID"]
-    except Exception:
-        # Caso Local: usamos .env
-        load_dotenv()
-        project_id = os.getenv("PROJECT_ID")
-        dataset_id = os.getenv("DATASET_ID")
-        credentials_path = os.getenv("CREDENTIALS_PATH")
-        creds = service_account.Credentials.from_service_account_file(credentials_path)
-        client = bigquery.Client(project=project_id, credentials=creds)
-        return client, dataset_id
+    except Exception as e:
+        st.error(f"❌ Error al crear cliente de BigQuery: {e}")
+        return None, None
 
 # -----------------------------
 # Carga de datos desde BigQuery
@@ -81,6 +74,8 @@ def get_bq_client():
 @st.cache_data
 def load_data(sample: bool = True):
     client, dataset_id = get_bq_client()
+    if not client:
+        return pd.DataFrame()
     try:
         query = f"""
             SELECT 
@@ -103,6 +98,7 @@ def load_data(sample: bool = True):
     except Exception as e:
         st.error(f"❌ Error al cargar datos desde BigQuery: {e}")
         return pd.DataFrame()
+
 
 # 🚀 Cambiar a False para full dataset
 df = load_data(sample=True)
