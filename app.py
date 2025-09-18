@@ -17,7 +17,7 @@ from theme import CUSTOM_COLORS, SEX_COLORS, DEFAULT_LAYOUT
 # Configuración de página
 # -----------------------------
 st.set_page_config(
-    page_title="Powerlifting Analytics Dashboard 1.0.6",
+    page_title="Powerlifting Analytics Dashboard",
     page_icon="🏋️‍♂️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -51,21 +51,37 @@ def format_count(num):
     return str(n)
 
 # -----------------------------
+# Credenciales BigQuery
+# -----------------------------
+def get_bq_client():
+    """Devuelve un cliente de BigQuery compatible con local y Streamlit Cloud."""
+    try:
+        # Caso Streamlit Cloud: usamos secrets
+        creds = service_account.Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"]
+        )
+        client = bigquery.Client(
+            credentials=creds,
+            project=st.secrets["general"]["PROJECT_ID"]
+        )
+        return client, st.secrets["general"]["DATASET_ID"]
+    except Exception:
+        # Caso Local: usamos .env
+        load_dotenv()
+        project_id = os.getenv("PROJECT_ID")
+        dataset_id = os.getenv("DATASET_ID")
+        credentials_path = os.getenv("CREDENTIALS_PATH")
+        creds = service_account.Credentials.from_service_account_file(credentials_path)
+        client = bigquery.Client(project=project_id, credentials=creds)
+        return client, dataset_id
+
+# -----------------------------
 # Carga de datos desde BigQuery
 # -----------------------------
-load_dotenv()
-
 @st.cache_data
 def load_data(sample: bool = True):
-    project_id = os.getenv("PROJECT_ID")
-    dataset_id = os.getenv("DATASET_ID")
-    credentials_path = os.getenv("CREDENTIALS_PATH")
-    if not (project_id and dataset_id and credentials_path):
-        st.error("❌ Variables de entorno no configuradas en .env")
-        return pd.DataFrame()
+    client, dataset_id = get_bq_client()
     try:
-        credentials = service_account.Credentials.from_service_account_file(credentials_path)
-        client = bigquery.Client(project=project_id, credentials=credentials)
         query = f"""
             SELECT 
                 NameNormalized, Sex, Equipment, Country, Year, Date, AgeClass,
@@ -75,11 +91,11 @@ def load_data(sample: bool = True):
                 Squat1Kg,Squat2Kg,Squat3Kg,
                 Bench1Kg,Bench2Kg,Bench3Kg,
                 Deadlift1Kg,Deadlift2Kg,Deadlift3Kg
-            FROM `{project_id}.{dataset_id}.results_clean`
+            FROM `{client.project}.{dataset_id}.results_clean`
             WHERE Year >= 2000
         """
         if sample:
-            query += " LIMIT 100000"
+            query += " LIMIT 10000"
         df = client.query(query).to_dataframe(create_bqstorage_client=False)
         if "Date" in df.columns:
             df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
@@ -94,20 +110,62 @@ if df.empty:
     st.stop()
 
 # -----------------------------
+# Helpers analíticos
+# -----------------------------
+def col_ok(df, *cols):
+    return all(c in df.columns for c in cols)
+
+def score_col(df):
+    for c in ["Dots","Wilks","Goodlift","Glossbrenner"]:
+        if c in df.columns:
+            return c
+    return None
+
+def athlete_slice(df, name):
+    return df[df["NameNormalized"] == name].copy()
+
+def running_pr(series):
+    return series.cummax()
+
+def success_rate(row):
+    out = {}
+    spec = {
+        "Sentadilla":["Squat1Kg","Squat2Kg","Squat3Kg"],
+        "Banca":["Bench1Kg","Bench2Kg","Bench3Kg"],
+        "Peso Muerto":["Deadlift1Kg","Deadlift2Kg","Deadlift3Kg"],
+    }
+    for lift, cols in spec.items():
+        hit = sum((c in row and pd.notna(row[c]) and float(row[c])>0) for c in cols)
+        out[lift] = round(100*hit/3,1)
+    return out
+
+def last_meet_rows(adf):
+    if not col_ok(adf,"Date"): return None, None
+    tmp = adf.sort_values("Date")
+    return tmp.iloc[-1].to_dict(), tmp.tail(1)
+
+def my_category_mask(df, row):
+    mask = pd.Series(True, index=df.index)
+    for c in ["Sex","Equipment","AgeClass","WeightClass"]:
+        if c in df.columns and c in row and pd.notna(row[c]):
+            mask &= (df[c].astype(str) == str(row[c]))
+    return mask
+
+# -----------------------------
 # HEADER
 # -----------------------------
-st.markdown('<h1 style="text-align:center; color:#C6D92D;">Powerlifting Analytics Dashboard 1.0.6</h1>', unsafe_allow_html=True)
+st.markdown('<h1 style="text-align:center; color:#8c8cff;">Powerlifting Analytics Dashboard</h1>', unsafe_allow_html=True)
 st.markdown("---")
 
 # -----------------------------
 # Tabs
 # -----------------------------
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "ℹ️ Información General",
+    "📊 Información General",
     "🌍 Análisis Geográfico",
-    "🎯 Análisis por Categorías",
-    "📈 Análisis de Rendimiento",
-    "🧮 Simulador de Nivel"
+    "📦 Análisis por Categorías",
+    "📑 Ficha del Atleta",
+    "🎯 Comparador Personal"
 ])
 
 # -----------------------------

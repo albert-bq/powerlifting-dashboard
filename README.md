@@ -31,8 +31,9 @@ powerlifting_dashboard/
 ├── theme.py                   # paleta y estilos de Plotly centralizados
 ├── requirements.txt           # dependencias
 ├── .env.example               # ejemplo de variables de entorno
+├── LICENSE                    # Licencia de uso
 ├── notebooks/
-│   └── powerlifting_analysis.ipynb  # notebook para descargar/preparar data
+│   └── powerlifting_analysis.ipynb  # notebook para descargar/preparar/limpiar/cargar data
 └── .gitignore
 ```
 
@@ -246,7 +247,7 @@ pip install -r requirements.txt
 
 ## 📝 Licencia
 
-Propón la que prefieras (por ejemplo **MIT**). Si no incluyes licencia, por defecto **todos los derechos reservados**.
+Este proyecto está bajo la Licencia MIT. Para más detalles, consulta el archivo LICENSE
 
 ---
 
@@ -278,3 +279,4 @@ df = load_data(sample=False)
 ```
 
 Disfruta explorando y compartiendo tu dashboard de powerlifting 💪
+Luis Bustos Q. - Data Analyst
