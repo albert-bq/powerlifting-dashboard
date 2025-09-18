@@ -1,0 +1,36 @@
+# Entorno virtual
+.venv/
+env/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de entorno y credenciales
+.env
+*.json
+*.yaml
+*.yml
+
+# Archivos de configuración locales
+.DS_Store
+*.log
+
+# Notebooks con checkpoints
+.ipynb_checkpoints/
+
+# Archivos temporales de VSCode / IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# Datos locales (CSV, Parquet, etc.)
+data/
+*.csv
+*.parquet
+
+# Salidas temporales de Streamlit
+.streamlit/secrets.toml
+.streamlit/config.toml
+.streamlit/logs/
