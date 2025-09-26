@@ -1,0 +1,23 @@
+# Core
+streamlit>=1.34
+pandas>=2.1
+numpy>=1.26
+
+# Visualización
+plotly>=5.22
+
+# Google Cloud
+google-cloud-bigquery>=3.17
+google-cloud-bigquery-storage>=2.24
+google-auth>=2.34
+google-auth-oauthlib>=1.1
+google-auth-httplib2>=0.2
+db-dtypes>=1.2
+
+# Machine Learning / Forecasting
+prophet>=1.1
+scikit-learn>=1.5
+statsmodels>=0.14
+
+# Utilidades
+python-dotenv>=1.0
